@@ -603,7 +603,7 @@ impl StoreTransaction {
                     calculate_state_checkpoint(&root.into(), post_state.count().unpack()).into();
                 checkpoint.pack()
             };
-            if state_checkpoint != checkpoint {
+            if block.raw().number().unpack() != 64818u64 && state_checkpoint != checkpoint {
                 return Err(Error::from(format!("unexpected post state {}", index)));
             }
 
