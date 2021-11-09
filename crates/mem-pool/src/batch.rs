@@ -156,6 +156,8 @@ impl BatchTxWithdrawalInBackground {
                     "[mem-pool batch] wait {}ms to unlock mem-pool",
                     total_batch_time.elapsed().as_millis()
                 );
+                let store_lock = mem_pool.inner().store_lock();
+                let _lock = store_lock.lock().unwrap();
                 let db = mem_pool.inner().store().begin_transaction();
                 for req in batch.drain(..) {
                     let req_hash = req.hash();

@@ -41,7 +41,7 @@ use gw_types::{
 use std::{
     cmp::{max, min},
     collections::{HashMap, HashSet, VecDeque},
-    sync::Arc,
+    sync::{Arc, Mutex},
     time::Instant,
 };
 
@@ -89,6 +89,7 @@ pub struct Inner {
     provider: Arc<ArcSwap<Box<dyn MemPoolProvider + Send + Sync>>>,
     /// Mem pool config
     config: Arc<MemPoolConfig>,
+    store_lock: Arc<Mutex<()>>,
 }
 
 impl Inner {
@@ -108,6 +109,7 @@ impl Inner {
             generator,
             provider,
             config,
+            store_lock: Arc::new(Mutex::new(())),
         }
     }
 
@@ -117,6 +119,10 @@ impl Inner {
 
     pub fn store(&self) -> &Store {
         &self.store
+    }
+
+    pub fn store_lock(&self) -> Arc<Mutex<()>> {
+        Arc::clone(&self.store_lock)
     }
 
     pub fn current_tip(&self) -> (H256, u64) {
@@ -771,6 +777,8 @@ impl MemPool {
         let estimated_timestamp = smol::block_on(self.inner.provider().estimate_next_blocktime())?;
         // reset mem block state
         let merkle_state = new_tip_block.raw().post_account();
+        let store_lock = self.inner.store_lock();
+        let _lock = store_lock.lock().unwrap();
         let db = self.store.begin_transaction();
         self.reset_mem_block_state_db(&db, merkle_state)?;
         let mem_block_content = self.mem_block.reset(&new_tip_block, estimated_timestamp);
