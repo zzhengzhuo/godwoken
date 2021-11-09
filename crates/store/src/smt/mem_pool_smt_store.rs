@@ -16,7 +16,7 @@ use super::{
     Columns,
 };
 
-const DELETED_FLAG: u8 = 0;
+pub(crate) const DELETED_FLAG: u8 = 0;
 
 /// MemPool SMTStore
 /// This is a mem-pool layer build upon SMTStore

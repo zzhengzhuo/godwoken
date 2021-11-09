@@ -1,5 +1,6 @@
 #![allow(clippy::mutable_key_type)]
 
+use crate::smt::mem_pool_smt_store::DELETED_FLAG;
 use crate::smt::smt_store::SMTCache;
 use crate::{smt::smt_store::SMTStore, traits::KVStore};
 use gw_common::h256_ext::H256Ext;
@@ -7,7 +8,8 @@ use gw_common::{merkle_utils::calculate_state_checkpoint, smt::SMT, H256};
 use gw_db::schema::{
     Col, COLUMN_ASSET_SCRIPT, COLUMN_BAD_BLOCK_CHALLENGE_TARGET, COLUMN_BLOCK,
     COLUMN_BLOCK_DEPOSIT_REQUESTS, COLUMN_BLOCK_GLOBAL_STATE, COLUMN_BLOCK_SMT_BRANCH,
-    COLUMN_BLOCK_SMT_LEAF, COLUMN_INDEX, COLUMN_L2BLOCK_COMMITTED_INFO, COLUMN_META,
+    COLUMN_BLOCK_SMT_LEAF, COLUMN_INDEX, COLUMN_L2BLOCK_COMMITTED_INFO,
+    COLUMN_MEM_POOL_ACCOUNT_SMT_BRANCH, COLUMN_MEM_POOL_ACCOUNT_SMT_LEAF, COLUMN_META,
     COLUMN_REVERTED_BLOCK_SMT_BRANCH, COLUMN_REVERTED_BLOCK_SMT_LEAF,
     COLUMN_REVERTED_BLOCK_SMT_ROOT, COLUMN_TRANSACTION, COLUMN_TRANSACTION_INFO,
     COLUMN_TRANSACTION_RECEIPT, META_BLOCK_SMT_ROOT_KEY, META_CHAIN_ID_KEY,
@@ -62,6 +64,13 @@ impl KVStore for StoreTransaction {
 
 impl StoreTransaction {
     pub fn commit(&self) -> Result<(), Error> {
+        let mut batch = self.inner.new_write_batch();
+        self.smt_cache.write(
+            COLUMN_MEM_POOL_ACCOUNT_SMT_LEAF,
+            COLUMN_MEM_POOL_ACCOUNT_SMT_BRANCH,
+            DELETED_FLAG,
+            &mut batch,
+        )?;
         self.inner.commit()
     }
 
