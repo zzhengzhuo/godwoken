@@ -105,8 +105,8 @@ pub enum CacheValue<V> {
 
 #[derive(Clone)]
 pub struct SMTCache {
-    branches: Arc<DashMap<BranchKey, CacheValue<BranchNode>>>,
-    leaves: Arc<DashMap<H256, CacheValue<H256>>>,
+    pub(crate) branches: Arc<DashMap<BranchKey, CacheValue<BranchNode>>>,
+    pub(crate) leaves: Arc<DashMap<H256, CacheValue<H256>>>,
 }
 
 impl SMTCache {
@@ -114,10 +114,9 @@ impl SMTCache {
         &self,
         leaf_col: Col,
         branch_col: Col,
+        deleted_flag: u8,
         write_batch: &mut RocksDBWriteBatch,
     ) -> Result<(), Error> {
-        const FLAG_DELETE_VALUE: u8 = 0;
-
         let mut branch_count = 0;
         for branch in self.branches.iter() {
             let key: packed::SMTBranchKey = branch.key().pack();
@@ -128,13 +127,10 @@ impl SMTCache {
                     branch_count += 1;
                 }
                 CacheValue::Deleted => {
-                    let node = FLAG_DELETE_VALUE.to_be_bytes();
-                    write_batch.put(branch_col, key.as_slice(), &node)?;
+                    write_batch.put(branch_col, key.as_slice(), &[deleted_flag])?;
                     branch_count += 1;
                 }
-                CacheValue::None => {
-                    // write_batch.delete(branch_col, key.as_slice())?;
-                }
+                CacheValue::None => {}
             }
         }
 
@@ -147,13 +143,10 @@ impl SMTCache {
                     leaf_count += 1;
                 }
                 CacheValue::Deleted => {
-                    let leaf = FLAG_DELETE_VALUE.to_be_bytes();
-                    write_batch.put(leaf_col, key.as_slice(), &leaf)?;
+                    write_batch.put(leaf_col, key.as_slice(), &[deleted_flag])?;
                     leaf_count += 1;
                 }
-                CacheValue::None => {
-                    // write_batch.delete(leaf_col, key.as_slice())?;
-                }
+                CacheValue::None => {}
             }
         }
 

@@ -15,4 +15,4 @@ gw-traits = { path = "../traits" }
 anyhow = "1.0"
 thiserror = "1.0"
 log = "0.4"
-dashmap = "4.0"
+dashmap = { version = "4.0", features = ["rayon"]}

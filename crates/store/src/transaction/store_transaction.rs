@@ -1,5 +1,6 @@
 #![allow(clippy::mutable_key_type)]
 
+use crate::smt::smt_store::SMTCache;
 use crate::{smt::smt_store::SMTStore, traits::KVStore};
 use gw_common::h256_ext::H256Ext;
 use gw_common::{merkle_utils::calculate_state_checkpoint, smt::SMT, H256};
@@ -27,6 +28,7 @@ use std::collections::HashSet;
 
 pub struct StoreTransaction {
     pub(crate) inner: RocksDBTransaction,
+    pub(crate) smt_cache: SMTCache,
 }
 
 impl KVStore for StoreTransaction {
@@ -64,6 +66,7 @@ impl StoreTransaction {
     }
 
     pub fn rollback(&self) -> Result<(), Error> {
+        self.smt_cache.clear();
         self.inner.rollback()
     }
 
