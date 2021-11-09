@@ -242,8 +242,10 @@ impl BenchExecutionEnvironment {
             transfer_count -= 1;
         }
 
+        state.submit_tree_to_mem_block().unwrap();
         db.commit().unwrap();
 
+        let db = self.store.begin_transaction();
         let state = db.mem_pool_state_tree().unwrap();
         let post_block_producer_balance = state
             .get_sudt_balance(

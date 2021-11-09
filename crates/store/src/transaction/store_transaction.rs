@@ -71,6 +71,7 @@ impl StoreTransaction {
             DELETED_FLAG,
             &mut batch,
         )?;
+        self.inner.write(&batch)?;
         self.inner.commit()
     }
 
