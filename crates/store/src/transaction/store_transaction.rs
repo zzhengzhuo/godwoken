@@ -64,15 +64,24 @@ impl KVStore for StoreTransaction {
 
 impl StoreTransaction {
     pub fn commit(&self) -> Result<(), Error> {
-        let mut batch = self.inner.new_write_batch();
-        self.smt_cache.write(
-            COLUMN_MEM_POOL_ACCOUNT_SMT_LEAF,
-            COLUMN_MEM_POOL_ACCOUNT_SMT_BRANCH,
-            DELETED_FLAG,
-            &mut batch,
-        )?;
-        self.inner.write(&batch)?;
-        self.inner.commit()
+        if !self.smt_cache.branches.is_empty() || !self.smt_cache.leaves.is_empty() {
+            let mut batch = self.inner.new_write_batch();
+            self.smt_cache.write(
+                COLUMN_MEM_POOL_ACCOUNT_SMT_LEAF,
+                COLUMN_MEM_POOL_ACCOUNT_SMT_BRANCH,
+                DELETED_FLAG,
+                &mut batch,
+            )?;
+            if let Err(err) = self.inner.write(&batch) {
+                log::error!("batch write err {}", err);
+            }
+        }
+        let ret = self.inner.commit();
+        match ret {
+            Ok(()) => log::warn!("commit success"),
+            Err(ref err) => log::error!("commit err {}", err),
+        }
+        ret
     }
 
     pub fn rollback(&self) -> Result<(), Error> {
