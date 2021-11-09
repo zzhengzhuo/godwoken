@@ -7,11 +7,12 @@ use rocksdb::{
     OptimisticTransaction, OptimisticTransactionDB, OptimisticTransactionSnapshot, ReadOptions,
     WriteBatch,
 };
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 pub struct RocksDBTransaction {
     pub(crate) db: Arc<OptimisticTransactionDB>,
     pub(crate) inner: OptimisticTransaction,
+    pub(crate) lock: Arc<Mutex<()>>,
 }
 
 impl RocksDBTransaction {
@@ -56,6 +57,7 @@ impl RocksDBTransaction {
     }
 
     pub fn commit(&self) -> Result<()> {
+        let _lock = self.lock.lock().unwrap();
         self.inner.commit().map_err(internal_error)
     }
 

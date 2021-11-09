@@ -12,7 +12,7 @@ use rocksdb::{
     ffi, ColumnFamily, ColumnFamilyDescriptor, DBPinnableSlice, FullOptions, IteratorMode,
     OptimisticTransactionDB, OptimisticTransactionOptions, Options, WriteBatch, WriteOptions,
 };
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 /// RocksDB wrapper base on OptimisticTransactionDB
 ///
@@ -20,6 +20,7 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub struct RocksDB {
     pub(crate) inner: Arc<OptimisticTransactionDB>,
+    pub(crate) lock: Arc<Mutex<()>>,
 }
 
 impl RocksDB {
@@ -111,6 +112,7 @@ impl RocksDB {
 
         Ok(RocksDB {
             inner: Arc::new(db),
+            lock: Arc::new(Mutex::new(())),
         })
     }
 
@@ -168,6 +170,7 @@ impl RocksDB {
         RocksDBTransaction {
             db: Arc::clone(&self.inner),
             inner: self.inner.transaction(&write_options, &transaction_options),
+            lock: Arc::clone(&self.lock),
         }
     }
 
