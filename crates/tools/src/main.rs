@@ -1387,17 +1387,26 @@ fn run_cli() -> Result<()> {
             })
             .collect();
 
+            let mut client = GodwokenRpcClient::new("https://mainnet.godwoken.io/rpc");
+            let tip_number = client.get_tip_number()?.value();
+            let last_finalized_block = tip_number - 3600;
+
             let stat = stat::stat_custodian_cells(
                 &rpc_client,
                 &rollup_type_hash.into(),
                 &custodian_script_type_hash.into(),
                 Some(min_capacity),
+                last_finalized_block,
             )?;
 
             let ckb = stat.total_capacity / ONE_CKB as u128;
             let shannon = stat.total_capacity - (ckb * ONE_CKB as u128);
             println!("Cells count: {}", stat.cells_count);
             println!("Total custodian: {}.{:0>8} CKB", ckb, shannon);
+            println!(
+                "Total finalized custodian: {}",
+                stat.total_finalized_capacity
+            );
             if !stat.sudt_total_amount.is_empty() {
                 println!("========================================");
             }

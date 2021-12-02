@@ -7,6 +7,7 @@ use async_jsonrpc_client::{HttpClient, Params as ClientParams, Transport};
 use ckb_types::prelude::Entity;
 use gw_jsonrpc_types::ckb_jsonrpc_types::Uint32;
 use gw_types::offchain::CustodianStat;
+use gw_types::packed::CustodianLockArgs;
 use gw_types::{
     offchain::CellInfo,
     packed::{CellOutput, OutPoint, Script},
@@ -120,6 +121,7 @@ impl CKBIndexerClient {
         &self,
         lock: Script,
         min_capacity: Option<u64>,
+        last_finalized_block: u64,
     ) -> Result<CustodianStat> {
         let mut sudt_total_amount: HashMap<ckb_types::packed::Script, u128> = HashMap::default();
 
@@ -141,6 +143,7 @@ impl CKBIndexerClient {
         let limit = Uint32::from(DEFAULT_QUERY_LIMIT as u32);
 
         let mut total_capacity = 0u128;
+        let mut total_finalized_capacity = 0u128;
         let mut cells_count = 0;
         let mut cursor = None;
         loop {
@@ -168,6 +171,15 @@ impl CKBIndexerClient {
                 let capacity: u64 = cell.output.capacity.into();
                 total_capacity += capacity as u128;
 
+                // finalized capacity
+                let custodian_lock_args =
+                    CustodianLockArgs::from_slice(&cell.output.lock.args.as_bytes()[32..])?;
+                let is_finalized =
+                    custodian_lock_args.deposit_block_number().unpack() <= last_finalized_block;
+                if is_finalized {
+                    total_finalized_capacity += capacity as u128;
+                }
+
                 if let Some(type_) = cell.output.type_.as_ref() {
                     assert_eq!(cell.output_data.len(), 16);
 
@@ -186,6 +198,7 @@ impl CKBIndexerClient {
             cells_count,
             total_capacity,
             sudt_total_amount,
+            total_finalized_capacity,
         })
     }
 }

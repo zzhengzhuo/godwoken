@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
-use ckb_jsonrpc_types::Script;
+use ckb_jsonrpc_types::{Script, Uint64};
 use ckb_types::{bytes::Bytes, H256};
 use gw_jsonrpc_types::{
     ckb_jsonrpc_types::{JsonBytes, Uint128, Uint32},
     debugger::{DumpChallengeTarget, ReprMockTransaction},
-    godwoken::{RunResult, TxReceipt},
+    godwoken::{L2Block, RunResult, TxReceipt},
 };
 use std::{u128, u32};
 
@@ -28,9 +28,18 @@ impl GodwokenRpcClient {
 }
 
 impl GodwokenRpcClient {
-    pub fn get_tip_block_hash(&mut self) -> Result<Option<H256>> {
-        let params = serde_json::Value::Null;
-        self.rpc::<Option<H256>>("get_tip_block_hash", params)
+    pub fn get_tip_block_hash(&mut self) -> Result<H256> {
+        self.raw_rpc::<H256>("get_tip_block_hash", None)
+    }
+
+    pub fn get_tip_number(&mut self) -> Result<Uint64> {
+        self.raw_rpc::<Uint64>("eth_blockNumber", None)
+    }
+
+    pub fn get_block(&mut self, block_hash: H256) -> Result<Option<L2Block>> {
+        let params =
+            serde_json::Value::Array(vec![serde_json::Value::String(block_hash.to_string())]);
+        self.rpc::<Option<L2Block>>("get_block", params)
             .map(|opt| opt.map(Into::into))
     }
 
@@ -106,7 +115,7 @@ impl GodwokenRpcClient {
         challenge_target: DumpChallengeTarget,
     ) -> Result<ReprMockTransaction> {
         let params = serde_json::to_value((challenge_target,))?;
-        self.raw_rpc::<ReprMockTransaction>("debug_dump_cancel_challenge_tx", params)
+        self.raw_rpc::<ReprMockTransaction>("debug_dump_cancel_challenge_tx", Some(params))
             .map(Into::into)
     }
 
@@ -121,21 +130,23 @@ impl GodwokenRpcClient {
         params: serde_json::Value,
     ) -> Result<SuccessResponse> {
         let method_name = format!("gw_{}", method);
-        self.raw_rpc(&method_name, params)
+        self.raw_rpc(&method_name, Some(params))
             .map_err(|err| anyhow!("{}", err))
     }
 
     fn raw_rpc<SuccessResponse: serde::de::DeserializeOwned>(
         &mut self,
         method: &str,
-        params: serde_json::Value,
+        params: Option<serde_json::Value>,
     ) -> Result<SuccessResponse> {
         self.id += 1;
         let mut req_json = serde_json::Map::new();
         req_json.insert("id".to_owned(), serde_json::to_value(&self.id).unwrap());
         req_json.insert("jsonrpc".to_owned(), serde_json::to_value(&"2.0").unwrap());
         req_json.insert("method".to_owned(), serde_json::to_value(method).unwrap());
-        req_json.insert("params".to_owned(), params);
+        if let Some(params) = params {
+            req_json.insert("params".to_owned(), params);
+        }
 
         let resp = self.client.post(self.url.clone()).json(&req_json).send()?;
         let output = resp.json::<jsonrpc_core::response::Output>()?;
