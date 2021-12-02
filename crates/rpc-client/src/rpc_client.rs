@@ -803,6 +803,13 @@ impl RPCClient {
                     .await?,
             )?;
 
+            log::info!(
+                "collect custodian cells from indexer {}, candidate cell {} max_cell {}",
+                cells.objects.len(),
+                candidate_cells,
+                max_custodian_cells
+            );
+
             if cells.last_cursor.is_empty() {
                 break;
             }
@@ -813,11 +820,15 @@ impl RPCClient {
                 let custodian_lock_args = match CustodianLockArgsReader::verify(&args[32..], false)
                 {
                     Ok(()) => CustodianLockArgs::new_unchecked(args.slice(32..)),
-                    Err(_) => continue,
+                    Err(_) => {
+                        log::info!("cell fail to parse args");
+                        continue;
+                    }
                 };
 
                 if custodian_lock_args.deposit_block_number().unpack() > last_finalized_block_number
                 {
+                    log::info!("cell fail to check finalize time");
                     continue;
                 }
 
@@ -834,6 +845,7 @@ impl RPCClient {
                     if sudt_type_script.code_hash() != l1_sudt_script_type_hash
                         || sudt_type_script.hash_type() != ScriptHashType::Type.into()
                     {
+                        log::info!("fail to check l1 sudt");
                         continue;
                     }
                 }
@@ -855,6 +867,7 @@ impl RPCClient {
                     && !withdrawals_amount.sudt.contains_key(&type_hash.raw())
                     && sudt_candidates.len() > max_custodian_cells
                 {
+                    log::info!("fail to check sudt candidates");
                     continue;
                 }
 
@@ -876,6 +889,7 @@ impl RPCClient {
 
                 let custodian_capacity = custodian_cell.capacity as u128;
                 if let Err(AmountOverflow) = custodians.push(type_hash, Reverse(custodian_cell)) {
+                    log::info!("sudt amount overflow");
                     continue;
                 }
                 candidate_cells += 1;
@@ -891,6 +905,11 @@ impl RPCClient {
 
                 // Skip sudt fulfilled check if already fulfilled
                 if custodians.fulfilled || custodians.type_hash.is_ckb() {
+                    log::info!(
+                        "fulfilled {}, is_ckb {}",
+                        custodians.fulfilled,
+                        custodians.type_hash.is_ckb()
+                    );
                     continue;
                 }
 
@@ -904,6 +923,8 @@ impl RPCClient {
                 }
             }
         }
+
+        log::info!("phase 1, candidate cells: {}", candidate_cells);
 
         // No withdrawals, check whether we have custodians to defragment
         if withdrawals_amount.capacity == 0 {
