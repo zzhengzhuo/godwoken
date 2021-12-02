@@ -743,6 +743,11 @@ impl RPCClient {
     ) -> Result<QueryResult<CollectedCustodianCells>> {
         let rollup_context = &self.rollup_context;
 
+        log::info!(
+            "[collect custodian cell] start max_custodian_cells: {}",
+            max_custodian_cells
+        );
+
         let parse_sudt_amount = |cell: &Cell| -> Result<u128> {
             if cell.output.type_.is_none() {
                 return Err(anyhow!("no a sudt cell"));
@@ -1013,8 +1018,18 @@ impl RPCClient {
         if fulfilled_sudt == withdrawals_amount.sudt.len()
             && collected.capacity >= required_capacity
         {
+            log::info!(
+                "[collect custodian cell] collect enough cells, capacity: {}, cells: {}",
+                collected.capacity,
+                collected.cells_info.len()
+            );
             Ok(QueryResult::Full(collected))
         } else {
+            log::info!(
+                "[collect custodian cell] collect not enough cells, capacity: {}, cells: {}",
+                collected.capacity,
+                collected.cells_info.len()
+            );
             Ok(QueryResult::NotEnough(collected))
         }
     }
