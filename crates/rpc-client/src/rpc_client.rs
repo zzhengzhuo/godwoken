@@ -933,6 +933,11 @@ impl RPCClient {
                 .filter(|(_, candidates)| candidates.cells.len() > 5)
                 .collect();
             if sudt_candidates.is_empty() || ckb_candidates.cells.len() <= 5 {
+                log::info!(
+                    "sudt candidates {} ckb candidates cells: {}",
+                    sudt_candidates.len(),
+                    ckb_candidates.cells.len()
+                );
                 return Ok(QueryResult::NotEnough(CollectedCustodianCells::default()));
             }
         }
@@ -950,10 +955,18 @@ impl RPCClient {
 
         // Fill ckb custodians first since we need capacity everywhere
         let mut ckb_remain = ckb_candidates.cells.into_iter();
+        log::info!("ckb remain {}", ckb_remain.len());
         for cell in &mut ckb_remain {
             if collected.cells_info.len() > max_custodian_cells
                 || collected.capacity >= required_capacity
             {
+                log::info!(
+                    "collected.cells_info {} max_custodian_cells {}, collected.capacity {} required_capacity: {}",
+                    collected.cells_info.len(),
+                    max_custodian_cells,
+                    collected.capacity,
+                    required_capacity,
+                );
                 break;
             }
 
@@ -963,13 +976,24 @@ impl RPCClient {
 
         // Fill sudt custodians for withdrawal requests
         let mut sudt_candidates = sudt_candidates.into_iter();
+        log::info!("sudt_candidates {}", sudt_candidates.len(),);
         'fill_for_withdrawals: for mut custodians in &mut sudt_candidates {
             let mut sudt_remains = custodians.cells.into_iter();
+            log::info!("sudt_remains {}", sudt_remains.len(),);
             for cell in &mut sudt_remains {
                 if collected.cells_info.len() > max_custodian_cells
                     || (collected.capacity >= required_capacity
                         && fulfilled_sudt == withdrawals_amount.sudt.len())
                 {
+                    log::info!("collected cells_info.len() {} max_custodian_cells {}, collected.capacity {} required_cpacity: {} fulfilled_sudt {} withdrawals_amount.sudt.len(): {}",
+                    collected.cells_info.len(),
+                    max_custodian_cells,
+                    collected.capacity,
+                    required_capacity,
+                    fulfilled_sudt,
+                    withdrawals_amount.sudt.len()
+
+                    );
                     custodians.cells = sudt_remains.collect();
                     break 'fill_for_withdrawals;
                 }
@@ -987,6 +1011,11 @@ impl RPCClient {
 
                 let withdrawal_amount = withdrawals_amount.sudt.get(&custodians.type_hash.raw());
                 if Some(&*collected_amount) >= withdrawal_amount {
+                    log::info!(
+                        "collected_amount: {} withdrawal_amount: {:?}",
+                        collected_amount,
+                        withdrawal_amount
+                    );
                     fulfilled_sudt += 1;
                     break;
                 }
@@ -997,6 +1026,11 @@ impl RPCClient {
         // Ckb first
         for cell in ckb_remain {
             if collected.cells_info.len() > max_custodian_cells {
+                log::info!(
+                    "collected.cells_info.len(): {} max_custodian_cells: {}",
+                    collected.cells_info.len(),
+                    max_custodian_cells
+                );
                 break;
             }
 
@@ -1014,11 +1048,22 @@ impl RPCClient {
                 && (sudt_remains.len() < 3 // Few custodians to combine
                     || (max_custodian_cells.saturating_sub(collected_cells) == 1))
             {
+                log::info!(
+                    "sudt_remains.len(): {} max_custodian_cells: {} collected_cells: {}",
+                    sudt_remains.len(),
+                    max_custodian_cells,
+                    collected_cells
+                );
                 continue;
             }
 
             for cell in sudt_remains {
                 if collected.cells_info.len() > max_custodian_cells {
+                    log::info!(
+                        "collected.cells_info.len(): {} max_custodian_cells: {}",
+                        collected.cells_info.len(),
+                        max_custodian_cells,
+                    );
                     break 'fill_for_defragment;
                 }
 
