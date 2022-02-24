@@ -11,6 +11,6 @@ serde = { version = "1.0", features = ["derive"] }
 faster-hex = "0.4"
 gw-types = { path = "../types" }
 gw-common = { path = "../common" }
-ckb-jsonrpc-types = "0.100.0"
-ckb-fixed-hash = "0.100.0"
+ckb-jsonrpc-types = { git = "https://github.com/zzhengzhuo/ckb.git", branch = "v0.100.0-rc1" }
+ckb-fixed-hash = { git = "https://github.com/zzhengzhuo/ckb.git", branch = "v0.100.0-rc1" }
 anyhow = "1.0"

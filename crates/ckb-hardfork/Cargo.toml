@@ -9,5 +9,5 @@ edition = "2018"
 [dependencies]
 lazy_static = "1.4"
 tokio = "1.15"
-ckb-types = "0.100.0"
+ckb-types = { git = "https://github.com/zzhengzhuo/ckb.git", branch = "v0.100.0-rc1" }
 arc-swap = "1.5"
