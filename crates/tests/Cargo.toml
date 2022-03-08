@@ -21,20 +21,22 @@ gw-rpc-server = { path = "../rpc-server" }
 gw-rpc-client = { path = "../rpc-client" }
 anyhow = "1.0"
 blake2b-rs = "0.2"
-ckb-vm = { version = "=0.20.0-rc5", features = ["detect-asm"] }
+ckb-vm = { git = "https://github.com/zzhengzhuo/ckb-vm.git", branch = "0.20.0-rc6", features = [
+    "detect-asm",
+] }
 ckb-vm-definitions = "=0.20.0-rc5"
 thiserror = "1.0"
 lazy_static = "1.4"
 secp256k1 = { version = "0.20", features = ["recovery"] }
 sha3 = "0.9.1"
 hex = "0.4.2"
-ckb-script = "0.100.0"
-ckb-types = "0.100.0"
-ckb-error = "0.100.0"
-ckb-crypto = "0.100.0"
-ckb-hash = "0.100.0"
-ckb-traits = "0.100.0"
-ckb-fixed-hash = "0.100.0"
+ckb-script = { git = "https://github.com/zzhengzhuo/ckb.git", branch = "v0.100.0-rc1" }
+ckb-types = { git = "https://github.com/zzhengzhuo/ckb.git", branch = "v0.100.0-rc1" }
+ckb-error = { git = "https://github.com/zzhengzhuo/ckb.git", branch = "v0.100.0-rc1" }
+ckb-crypto = { git = "https://github.com/zzhengzhuo/ckb.git", branch = "v0.100.0-rc1" }
+ckb-hash = { git = "https://github.com/zzhengzhuo/ckb.git", branch = "v0.100.0-rc1" }
+ckb-traits = { git = "https://github.com/zzhengzhuo/ckb.git", branch = "v0.100.0-rc1" }
+ckb-fixed-hash = { git = "https://github.com/zzhengzhuo/ckb.git", branch = "v0.100.0-rc1" }
 rand = "0.8"
 serde = "1.0"
 serde_json = "1.0"
