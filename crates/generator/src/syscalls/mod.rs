@@ -54,6 +54,7 @@ const SYS_GET_BLOCK_HASH: u64 = 3404;
 const SYS_PAY_FEE: u64 = 3501;
 const SYS_LOG: u64 = 3502;
 const SYS_RECOVER_ACCOUNT: u64 = 3503;
+const SYS_SECP_K1: u64 = 3601;
 /* CKB compatible syscalls */
 const DEBUG_PRINT_SYSCALL_NUMBER: u64 = 2177;
 
@@ -411,6 +412,38 @@ impl<'a, S: State, C: ChainView, Mac: SupportMachine> Syscalls<Mac> for L2Syscal
                         machine
                             .memory_mut()
                             .store_bytes(script_addr, account_script.as_slice())?;
+                        machine.set_register(A0, Mac::REG::from_u8(SUCCESS));
+                    } else {
+                        machine.set_register(A0, Mac::REG::from_i8(GW_ERROR_RECOVER));
+                    }
+                } else {
+                    log::debug!("unexpected lock code hash: {:?}", code_hash);
+                    machine.set_register(A0, Mac::REG::from_i8(GW_FATAL_UNKNOWN_ARGS));
+                }
+
+                Ok(true)
+            }
+            SYS_SECP_K1 => {
+                // gw_recover_account(msg: Byte32, signature: Bytes, code_hash: Byte32) -> Script
+                let lock_addr = machine.registers()[A0].to_u64();
+                let lock_len_addr = machine.registers()[A1].clone();
+                let msg_addr = machine.registers()[A2].to_u64();
+                let signature_addr = machine.registers()[A3].to_u64();
+                let signature_len = machine.registers()[A4].to_u64();
+                let code_hash_addr = machine.registers()[A5].to_u64();
+
+                let msg = load_data_h256(machine, msg_addr)?;
+                let signature = load_bytes(machine, signature_addr, signature_len as usize)?;
+                let code_hash = load_data_h256(machine, code_hash_addr)?;
+
+                if let Some(lock_algo) = self.account_lock_manage.get_lock_algorithm(&code_hash) {
+                    if let Ok(lock_args) = lock_algo.recover(msg, &signature) {
+                        machine
+                            .memory_mut()
+                            .store64(&lock_len_addr, &Mac::REG::from_u64(lock_args.len() as u64))?;
+                        machine
+                            .memory_mut()
+                            .store_bytes(lock_addr, lock_args.as_ref())?;
                         machine.set_register(A0, Mac::REG::from_u8(SUCCESS));
                     } else {
                         machine.set_register(A0, Mac::REG::from_i8(GW_ERROR_RECOVER));
